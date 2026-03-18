@@ -1,12 +1,14 @@
 # FinTrack Lite
 
-Personal finance tracker for income/expense logging with summary cards and category chart.
+Personal finance dashboard with monthly analytics and budget control.
 
 ## Features
-- Add transactions with type, category, and date
-- Auto-calculated balance, income, and expenses
-- Canvas-based expense category chart
-- Local storage persistence
+- Add and delete transactions (income/expense)
+- Monthly filter for period-based reporting
+- Summary cards: balance, savings rate, totals
+- Category budgets with utilization progress bars
+- Expense chart by category (Canvas)
+- CSV export for transaction history
 
 ## Run
 Open `index.html` in a browser.
