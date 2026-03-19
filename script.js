@@ -1,5 +1,5 @@
-const TXN_KEY = 'fintrack-lite-transactions-v2';
-const BUDGET_KEY = 'fintrack-lite-budgets-v1';
+const TXN_KEY = 'fintrack-lite-transactions-v3';
+const BUDGET_KEY = 'fintrack-lite-budgets-v2';
 
 const seed = [
   { id: crypto.randomUUID(), title: 'Salary', amount: 55000, type: 'income', category: 'Salary', date: '2026-03-01' },
@@ -16,6 +16,9 @@ const refs = {
   txnForm: document.getElementById('txnForm'),
   budgetForm: document.getElementById('budgetForm'),
   budgetList: document.getElementById('budgetList'),
+  aiInsights: document.getElementById('aiInsights'),
+  aiInsightsBtn: document.getElementById('aiInsightsBtn'),
+  smartBudgetBtn: document.getElementById('smartBudgetBtn'),
   monthFilter: document.getElementById('monthFilter'),
   exportCsvBtn: document.getElementById('exportCsvBtn'),
   chart: document.getElementById('chart')
@@ -104,7 +107,6 @@ function renderBudgetList(categoryTotals) {
       const budget = Number(budgets[category] || 0);
       const used = Number(categoryTotals[category] || 0);
       const pct = budget ? Math.min(100, Math.round((used / budget) * 100)) : 0;
-
       return `
         <article class="budget-item">
           <strong>${category}</strong>
@@ -121,7 +123,6 @@ function renderChart(categoryTotals) {
   const width = refs.chart.width;
   const height = refs.chart.height;
   ctx.clearRect(0, 0, width, height);
-
   if (!entries.length) return;
 
   const max = Math.max(...entries.map(([, val]) => val));
@@ -134,12 +135,58 @@ function renderChart(categoryTotals) {
 
     ctx.fillStyle = '#0f766e';
     ctx.fillRect(x, y, barWidth, barHeight);
-
     ctx.fillStyle = '#374151';
     ctx.font = '13px Outfit';
     ctx.fillText(category, x, height - 12);
     ctx.fillText(String(value), x, y - 6);
   });
+}
+
+function generateAIInsights() {
+  const list = visibleTransactions();
+  const t = totals(list);
+  const categories = expenseByCategory(list);
+  const topCategoryEntry = Object.entries(categories).sort((a, b) => b[1] - a[1])[0];
+  const topCategory = topCategoryEntry ? topCategoryEntry[0] : 'N/A';
+  const topValue = topCategoryEntry ? topCategoryEntry[1] : 0;
+
+  const tips = [];
+  tips.push(`Cashflow check: Savings rate is ${t.savingsRate}% for selected month.`);
+  tips.push(`Highest expense bucket: ${topCategory} (${money(topValue)}).`);
+
+  if (t.savingsRate < 25) tips.push('Action: Try cutting 10-15% from non-essential expenses this month.');
+  if (t.expense > t.income) tips.push('Risk: Expenses are higher than income. Freeze low-priority spending now.');
+
+  const budgetWarnings = Object.keys(budgets)
+    .map((cat) => {
+      const used = categories[cat] || 0;
+      const budget = Number(budgets[cat] || 0);
+      if (!budget) return null;
+      const pct = Math.round((used / budget) * 100);
+      return pct >= 100 ? `${cat} is at ${pct}% of budget` : null;
+    })
+    .filter(Boolean);
+
+  if (budgetWarnings.length) tips.push(`Budget alert: ${budgetWarnings.join(', ')}.`);
+  tips.push('AI next step: Review top 3 expenses and set reminder to log transactions daily.');
+
+  refs.aiInsights.innerHTML = tips.map((tip) => `<li>${tip}</li>`).join('');
+}
+
+function applySmartBudget() {
+  const expenses = transactions.filter((t) => t.type === 'expense');
+  const grouped = expenses.reduce((acc, t) => {
+    acc[t.category] = (acc[t.category] || 0) + t.amount;
+    return acc;
+  }, {});
+
+  Object.entries(grouped).forEach(([category, amount]) => {
+    budgets[category] = Math.round(amount * 1.1);
+  });
+
+  persist();
+  render();
+  refs.aiInsights.innerHTML = '<li>AI Smart Budget applied: each category budget set to 110% of observed expense trend.</li>';
 }
 
 function exportCsv() {
@@ -178,14 +225,13 @@ refs.txnForm.addEventListener('submit', (e) => {
   refs.txnForm.reset();
   persist();
   render();
+  generateAIInsights();
 });
 
 refs.budgetForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const data = new FormData(refs.budgetForm);
-  const category = String(data.get('category'));
-  const amount = Number(data.get('amount'));
-  budgets[category] = amount;
+  budgets[String(data.get('category'))] = Number(data.get('amount'));
   refs.budgetForm.reset();
   persist();
   render();
@@ -198,11 +244,18 @@ refs.list.addEventListener('click', (e) => {
   transactions = transactions.filter((t) => t.id !== id);
   persist();
   render();
+  generateAIInsights();
 });
 
-refs.monthFilter.addEventListener('change', render);
+refs.monthFilter.addEventListener('change', () => {
+  render();
+  generateAIInsights();
+});
 refs.exportCsvBtn.addEventListener('click', exportCsv);
+refs.aiInsightsBtn.addEventListener('click', generateAIInsights);
+refs.smartBudgetBtn.addEventListener('click', applySmartBudget);
 
 if (transactions[0]) refs.monthFilter.value = monthOf(transactions[0].date);
 render();
+generateAIInsights();
 persist();

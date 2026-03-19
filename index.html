@@ -10,10 +10,13 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <div class="glow glow-one"></div>
+    <div class="glow glow-two"></div>
+
     <header>
       <div>
         <h1>FinTrack Lite</h1>
-        <p>Personal finance dashboard with monthly analytics and budget tracking.</p>
+        <p>Personal finance dashboard with monthly analytics and budget coaching.</p>
       </div>
       <div class="header-actions">
         <input id="monthFilter" type="month" />
@@ -22,6 +25,18 @@
     </header>
 
     <section class="cards" id="summary"></section>
+
+    <section class="ai-panel panel">
+      <div>
+        <h2>AI Finance Coach</h2>
+        <p>Get automated insights and recommendations from your spending trends.</p>
+      </div>
+      <div class="ai-actions">
+        <button id="aiInsightsBtn">Generate AI Insights</button>
+        <button id="smartBudgetBtn" class="secondary">AI Smart Budget</button>
+      </div>
+      <ul id="aiInsights"></ul>
+    </section>
 
     <section class="layout">
       <article class="panel">
